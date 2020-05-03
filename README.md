@@ -1,6 +1,7 @@
 ### Introspect
 Introspection middleware for Fiber
-Provides verifying an access token against a remote Introspection endpoint (RFC7662) 
+
+Provides verifying an access token against a remote Introspection endpoint (RFC7662)
 
 ### Install
 ```
