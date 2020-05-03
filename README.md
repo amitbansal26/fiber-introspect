@@ -43,9 +43,10 @@ import (
 
 func main() {
   app := fiber.New()
-  authz := introspect.New(introspect.Config{
+
+  app.Use(introspect.New(introspect.Config{
       IntrospectionURL: "http://example.com/oauth/token",
-  })
+  }))
 
   app.Listen(8080)
 }
