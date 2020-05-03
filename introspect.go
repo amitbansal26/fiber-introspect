@@ -41,10 +41,6 @@ type Config struct {
 	// Optional. Default: nil
 	Issuers []string
 
-	// Unauthorized defines the response body for unauthorized responses.
-	// Optional. Default: func(c *fiber.Ctx) string { c.SendStatus(401) }
-	Unauthorized func(*fiber.Ctx)
-
 	// ScopeStrategy is a strategy for matching scopes.
 	// Used when Scoped field has values.
 	// Optional. Default: nil
@@ -54,14 +50,26 @@ type Config struct {
 	// Optional. Default: TokenFromHeader
 	TokenLookup func(*fiber.Ctx) string
 
-	// ErrorHandler is a function for handling unexpected errors.
-	// Optional. Default: func(c *fiber.Ctx, err error) string { c.SendStatus(500) }
-	ErrorHandler func(*fiber.Ctx, error)
-
 	// IntrospectionRequestHeaders is list of headers
 	// that is send to introspection endpoint.
 	// Optional. Default: nil
 	IntrospectionRequestHeaders map[string]string
+
+	// Unauthorized defines the response body for unauthorized responses.
+	// Optional. Default: func(c *fiber.Ctx) string { c.SendStatus(401) }
+	Unauthorized func(*fiber.Ctx)
+
+	// ErrorHandler is a function for handling unexpected errors.
+	// Optional. Default: func(c *fiber.Ctx, err error) string { c.SendStatus(500) }
+	ErrorHandler func(*fiber.Ctx, error)
+
+	// SuccessHandler defines a function which is executed for a valid token.
+	// Optional. Default: nil
+	SuccessHandler func(*fiber.Ctx)
+
+	// Filter defines a function to skip middleware.
+	// Optional. Default: nil
+	Filter func(*fiber.Ctx) bool
 
 	client *http.Client
 }
@@ -122,6 +130,11 @@ func New(config ...Config) func(*fiber.Ctx) {
 	}
 
 	return func(c *fiber.Ctx) {
+
+		if cfg.Filter != nil && cfg.Filter(c) {
+			c.Next()
+			return
+		}
 
 		token := cfg.TokenLookup(c)
 		if token == "" {
@@ -211,6 +224,9 @@ func New(config ...Config) func(*fiber.Ctx) {
 		}
 
 		c.Locals(cfg.ContextKey, s)
+		if cfg.SuccessHandler != nil {
+			cfg.SuccessHandler(c)
+		}
 
 		c.Next()
 	}
