@@ -15,22 +15,58 @@ var (
 	errMalformedToken = errors.New("Missing or malformed token")
 )
 
+// Config holds the configuration for the middleware
 type Config struct {
-	IntrospectionURL            string
-	AuthScheme                  string
-	ContextKey                  string
-	Scopes                      []string
-	Audience                    []string
-	Issuers                     []string
-	Unauthorized                func(*fiber.Ctx)
-	ScopeStrategy               func([]string, string) bool
-	TokenLookup                 func(*fiber.Ctx) string
-	ErrorHandler                func(*fiber.Ctx, error)
+	// IntrospectionURL is introspection endpoint of OAuth server.
+	// Required. Default: ""
+	IntrospectionURL string
+
+	// AuthScheme is the scheme of Authorization header.
+	// Optional. Default: "Bearer"
+	AuthScheme string
+
+	// ContextKey is used to store token information into context.
+	// Optional. Default: "user"
+	ContextKey string
+
+	// Scopes defines required scopes for authorization.
+	// Optional. Default: nil
+	Scopes []string
+
+	// Audience defines required audience for authorization.
+	// Optional. Default: nil
+	Audience []string
+
+	// Issuers defines required issuers for authorization.
+	// Optional. Default: nil
+	Issuers []string
+
+	// Unauthorized defines the response body for unauthorized responses.
+	// Optional. Default: func(c *fiber.Ctx) string { c.SendStatus(401) }
+	Unauthorized func(*fiber.Ctx)
+
+	// ScopeStrategy is a strategy for matching scopes.
+	// Used when Scoped field has values.
+	// Optional. Default: nil
+	ScopeStrategy func([]string, string) bool
+
+	// TokenLookup is a function that is used to look up token.
+	// Optional. Default: TokenFromHeader
+	TokenLookup func(*fiber.Ctx) string
+
+	// ErrorHandler is a function for handling unexpected errors.
+	// Optional. Default: func(c *fiber.Ctx, err error) string { c.SendStatus(500) }
+	ErrorHandler func(*fiber.Ctx, error)
+
+	// IntrospectionRequestHeaders is list of headers
+	// that is send to introspection endpoint.
+	// Optional. Default: nil
 	IntrospectionRequestHeaders map[string]string
 
 	client *http.Client
 }
 
+// Session represents token data and stores in context.
 type Session struct {
 	Subject string
 	Extra   map[string]interface{}
@@ -48,6 +84,7 @@ type introspectionResult struct {
 	Scope     string                 `json:"scope,omitempty"`
 }
 
+// New creates an introspection middleware for use in Fiber
 func New(config ...Config) func(*fiber.Ctx) {
 
 	var cfg Config
@@ -180,7 +217,7 @@ func New(config ...Config) func(*fiber.Ctx) {
 }
 
 // TokenFromHeader returns a function that extracts token from the request header.
-func TokenFromHeader(header string, authScheme string) func(c *fiber.Ctx) string {
+func TokenFromHeader(header string, authScheme string) func(*fiber.Ctx) string {
 	return func(c *fiber.Ctx) string {
 		auth := c.Get(header)
 		l := len(authScheme)
@@ -192,21 +229,21 @@ func TokenFromHeader(header string, authScheme string) func(c *fiber.Ctx) string
 }
 
 // TokenFromQuery returns a function that extracts token from the query string.
-func TokenFromQuery(param string) func(c *fiber.Ctx) string {
+func TokenFromQuery(param string) func(*fiber.Ctx) string {
 	return func(c *fiber.Ctx) string {
 		return c.Query(param)
 	}
 }
 
 // TokenFromParam returns a function that extracts token from the url param string.
-func TokenFromParam(param string) func(c *fiber.Ctx) string {
+func TokenFromParam(param string) func(*fiber.Ctx) string {
 	return func(c *fiber.Ctx) string {
 		return c.Params(param)
 	}
 }
 
 // TokenFromCookie returns a function that extracts token from the named cookie.
-func TokenFromCookie(name string) func(c *fiber.Ctx) string {
+func TokenFromCookie(name string) func(*fiber.Ctx) string {
 	return func(c *fiber.Ctx) string {
 		return c.Cookies(name)
 	}
